@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../../../Arduino"
+		},
+		{
+			"name": "RemoteStart",
+			"path": "../../RemoteStart"
+		},
+		{
+			"name": "CDI",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
