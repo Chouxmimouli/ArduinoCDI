@@ -10,6 +10,10 @@
 		{
 			"name": "CDI",
 			"path": ".."
+		},
+		{
+			"name": "ArduinoCDI",
+			"path": "."
 		}
 	],
 	"settings": {}
