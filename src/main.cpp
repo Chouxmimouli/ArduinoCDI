@@ -4,30 +4,30 @@
 
 #define rev_limiter 21
 #define ignition_cut_time 100
-#define trigger_coil_angle 17
-#define E_0     17
-#define E_500   17
-#define E_1000  17
-#define E_1500  17
-#define E_2000  17
-#define E_2500  17
-#define E_3000  17
-#define E_3500  17
-#define E_4000  17
-#define E_4500  17
-#define E_5000  17
-#define E_5500  17
-#define E_6000  17
-#define E_6500  17
-#define E_7000  17
-#define E_7500  17
-#define E_8000  17
-#define E_8500  17
-#define E_9000  17
-#define E_9500  17
-#define E_10000 17
-#define E_10500 17
-#define E_11000 17
+#define trigger_coil_angle 27
+#define E_0     10
+#define E_500   10
+#define E_1000  10
+#define E_1500  13
+#define E_2000  16
+#define E_2500  19
+#define E_3000  22
+#define E_3500  25
+#define E_4000  27
+#define E_4500  27
+#define E_5000  27
+#define E_5500  27
+#define E_6000  27
+#define E_6500  27
+#define E_7000  27
+#define E_7500  27
+#define E_8000  27
+#define E_8500  27
+#define E_9000  27
+#define E_9500  27
+#define E_10000 27
+#define E_10500 27
+#define E_11000 27
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////Serial Communcation/////////////////////////////
