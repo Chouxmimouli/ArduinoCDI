@@ -2,8 +2,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define rev_limiter 21
-#define ignition_cut_time 100
+#define rev_limiter 7
+#define ignition_cut_time 20
 #define trigger_coil_angle 27
 #define E_0     10
 #define E_500   10
