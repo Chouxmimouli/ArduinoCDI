@@ -57,6 +57,11 @@ int main() {
   uint8_t map1[23] = { E_0, E_500, E_1000, E_1500, E_2000, E_2500, E_3000, E_3500, E_4000, E_4500, E_5000, E_5500, E_6000, E_6500, E_7000, E_7500, E_8000, E_8500, E_9000, E_9500, E_10000, E_10500, E_11000 };
   uint32_t pulse_delay, curve_select;
   uint8_t led = 0;
+  uint32_t time_prev_pulse = 0; // To store the time of the previous pulse
+  uint32_t time_current_pulse;  // To store the time of the current pulse
+  uint32_t pulse_interval;      // To store the time interval between pulses in microseconds
+  uint32_t rpm;                 // To store the calculated RPM
+  
   PORTB = 0b00000000;
   DDRB = 0b00100010;
   DDRD = 0b01000000;
@@ -65,13 +70,28 @@ int main() {
   uart_init();
 
   while (true) {
+    // Wait for the rising edge (HIGH state) of the pulse
     while ((PINB & 0b00000001) == 0b00000000);
+
+    // Store the time of the rising edge
+    time_prev_pulse = micros();
+
+    // Wait for the falling edge (LOW state) of the pulse
     while ((PINB & 0b00000001) == 0b00000001);
-    pulse_delay = TCNT1;
+
+    // Store the time of the falling edge
+    time_current_pulse = micros();
+
+    // Calculate the time interval between pulses
+    pulse_interval = time_current_pulse - time_prev_pulse;
+
+    // Calculate RPM based on the pulse interval
+    // The formula is: RPM = (60,000,000 / (trigger_coil_angle * pulse_interval))
+    // Since we are using microsecond intervals, we multiply by 60,000,000 to convert microseconds to minutes
+    rpm = 60000000UL / (trigger_coil_angle * pulse_interval);
+
+    // Rest of the code remains the same
     TCNT1 = 0;
-    curve_select = 30000 / pulse_delay;
-    pulse_delay *= trigger_coil_angle - map1[curve_select];
-    pulse_delay /= 360;
     led++;
     if (led == 1) {
       PORTB = 0b00100000;
