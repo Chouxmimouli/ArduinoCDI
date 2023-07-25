@@ -61,7 +61,7 @@ int main() {
   uint32_t time_current_pulse;  // To store the time of the current pulse
   uint32_t pulse_interval;      // To store the time interval between pulses in microseconds
   uint32_t rpm;                 // To store the calculated RPM
-  
+
   PORTB = 0b00000000;
   DDRB = 0b00100010;
   DDRD = 0b01000000;
@@ -92,6 +92,14 @@ int main() {
 
     // Rest of the code remains the same
     TCNT1 = 0;
+
+    int index(rpm) {
+    return RPM >= 0 ? static_cast<int>(RPM + 0.5) : static_cast<int>(RPM - 0.5);
+    }
+
+    pulse_delay *= trigger_coil_angle - map1[curve_select];
+    pulse_delay /= 360;
+
     led++;
     if (led == 1) {
       PORTB = 0b00100000;
