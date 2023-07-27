@@ -1,8 +1,7 @@
 #include <Arduino.h>
 #include <avr/io.h>
-#include <util/delay.h>
 
-#define rev_limiter 21
+#define rev_limiter 10500 // rpm value
 #define ignition_cut_time 20000 // >microseconds< // 1ms = 1000μs
 #define trigger_coil_angle 27
 #define E_0     10
@@ -101,25 +100,25 @@ int main() {
         //Waits the amount of time specified in delay_time
         while (TCNT1 < delay_time){
           // Check if RPM exceeds the rev_limiter threshold
-          if (map_index >= rev_limiter) {
-            // Ignition cut logic
-            PORTB = 0b00000000;  // Turn off ignition
-            _delay_ms(ignition_cut_time);  // Keep ignition off for ignition_cut_time
-          } else {
-              if (PIND & 0b10111111) {
-              PORTB = 0b00000010; // regular ignition
-              }
+          if (rpm >= rev_limiter) {
+            // Keep ignition off for ignition_cut_time
+            while (TCNT1 < ignition_cut_time) {
+              PORTB = 0b00000000;  // Turn off ignition
+            }
+          } 
+          else {
+            PORTB = 0b00000010; // regular ignition
           }
         }
-        // Time during which pin 9 will be high >microseconds<
-        while (TCNT1 < delay_time + 25){
-          PORTB = 0b00000000;
-        }
       }
-
+      // Time during which pin 9 will be high >microseconds<
+      while (TCNT1 < delay_time + 25)
+      PORTB = 0b00000000;
+    }
       // Transmit the value of map_index via serial
       uart_transmit_char(map_index);
       uart_transmit_string("\n");
-    }
   }
 }
+
+// To do : transmit rpm over UART >> convert float to uint16_t or int
