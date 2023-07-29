@@ -52,7 +52,7 @@ void uart_transmit_string(const char* string) {
 ////////////////////////////////////////////////////////////////////////////
 
 int main() {
-  uint8_t ignition_map[17] = { RPM_0, RPM_250, RPM_500, RPM_750, RPM_1000, RPM_1250, RPM_1500, RPM_1750, RPM_2000, RPM_2250, RPM_2500, RPM_2750, RPM_3000, RPM_3250, RPM_3500, RPM_3750, RPM_4000 };
+  float ignition_map[17] = { RPM_0, RPM_250, RPM_500, RPM_750, RPM_1000, RPM_1250, RPM_1500, RPM_1750, RPM_2000, RPM_2250, RPM_2500, RPM_2750, RPM_3000, RPM_3250, RPM_3500, RPM_3750, RPM_4000 };
   uint8_t led = 0, angle_difference, map_index;
   uint16_t rpm = 0; 
   uint32_t pulse_interval, delay_time;
@@ -78,7 +78,7 @@ int main() {
       rpm = 60000000 / pulse_interval;
 
       // Rounds the rpm value
-      map_index = round(static_cast<double>(rpm) / 500);
+      map_index = round(static_cast<float>(rpm) / 500);
       
       // Safety measure to limit the advence to 16 degrees >index 4< in case of an rpm sensor failure
       if (map_index > 43) {
@@ -93,6 +93,11 @@ int main() {
       angle_difference = trigger_coil_angle - ignition_map[map_index];
       delay_time = pulse_interval / 360 * angle_difference;
 
+      //////// Rev limiter and ignition ////////
+      
+      // Waits the amount of time specified in delay_time
+      while (TCNT1 < delay_time)
+      
       // Lighting the led up on pin 13 every x revolutions
       led++;
       if (led == 1) {
@@ -100,25 +105,19 @@ int main() {
         led = 0;
       }
 
-      //////// Rev limiter and ignition ////////
-      
-      // Waits the amount of time specified in delay_time
-      while (TCNT1 < delay_time){
-        // Check if RPM exceeds the rev_limiter threshold
-        if (rpm > rev_limiter) {
-          // Keep ignition off for ignition_cut_time
-          while (TCNT1 < ignition_cut_time) {
-            PORTB = 0b00000000;  // Turn off ignition
-          }
-        } 
-        else {
-          PORTB = 0b00000010; // Ignition on pin 9
-        }
+      // Check if RPM exceeds the rev_limiter threshold
+      if (rpm > rev_limiter) {
+        // Keep ignition off for ignition_cut_time
+        while (TCNT1 < ignition_cut_time);
+      } 
+      else {
+        PORTB = 0b00000010; // Ignition on pin 9
       }
       // Time during which pin 9 will be high >microseconds<
       while (TCNT1 < delay_time + 25)
       PORTB = 0b00000000;
     }
+    
     // Transmit the value of map_index through serial >UART<
     uart_transmit_char(map_index);
     uart_transmit_string("\n");
