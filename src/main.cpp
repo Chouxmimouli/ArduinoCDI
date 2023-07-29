@@ -78,7 +78,7 @@ int main() {
       rpm = 60000000 / pulse_interval;
 
       // Rounds the rpm value
-      map_index = round(static_cast<float>(rpm) / 500);
+      map_index = round(rpm / 500.0);
       
       // Safety measure to limit the advence to 16 degrees >index 4< in case of an rpm sensor failure
       if (map_index > 43) {
