@@ -1,7 +1,8 @@
 #include <Arduino.h>
 #include <avr/io.h>
+#include <string.h>
 
-#define rev_limiter 10500 // Rpm value
+#define rev_limiter 12000 // Rpm value
 #define ignition_cut_time 20000 // >Microseconds< // 1ms = 1000μs
 #define trigger_coil_angle 27
 #define RPM_0    10 // This curve is linear from 1000 RPM to 4000.
@@ -27,9 +28,9 @@
 ////////////////////////////////////////////////////////////////////////////
 
 void uart_init() {
-  UBRR0 = 103; // For 16MHz and baud rate of 9600
+  UBRR0 = 8; // For 16MHz and baud rate of 115200
   UCSR0B = (1 << TXEN0) | (1 << RXEN0); // Enable transmitter and receiver
-  UCSR0C = (1 << UCSZ01) | (1 << UCSZ00); // 8-bit data format
+  UCSR0C = (1 << UCSZ01) | (1 << UCSZ00); // 8-bit data, no parity, 1 stop bit
 }
 
 void uart_transmit_char(uint8_t data) {
@@ -37,15 +38,29 @@ void uart_transmit_char(uint8_t data) {
   UDR0 = data;
 }
 
-void uart_transmit_uint16(uint16_t data) {
-  uart_transmit_char((data >> 8) & 0xFF); // Transmit the high byte
-  uart_transmit_char(data & 0xFF); // Transmit the low byte
-}
-
 void uart_transmit_string(const char* string) {
   for (int i = 0; string[i] != '\0'; i++)
     uart_transmit_char(string[i]);
 }
+
+void uart_transmit_uint8(uint8_t data) {
+  char buffer[4]; // Buffer to hold the string representation of the number
+  snprintf(buffer, sizeof(buffer), "%u", data); // Convert uint8_t to string
+  uart_transmit_string(buffer); // Transmit the string over UART
+}
+
+void uart_transmit_uint16(uint16_t data) {
+  char buffer[6]; // Buffer to hold the string representation of the number
+  snprintf(buffer, sizeof(buffer), "%u", data); // Convert uint16_t to string
+  uart_transmit_string(buffer); // Transmit the string over UART
+}
+
+void uart_transmit_uint32(uint32_t data) {
+  char buffer[11]; // Buffer to hold the string representation of the number
+  snprintf(buffer, sizeof(buffer), "%lu", data); // Convert uint32_t to string
+  uart_transmit_string(buffer); // Transmit the string over UART
+}
+
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////Main Function///////////////////////////////
@@ -60,69 +75,71 @@ int main() {
   PORTB = 0b00000000;
   DDRB = 0b00100010;
   DDRD = 0b01000000;
-  TCCR1B = 0b00000011;
+  TCCR1B = 0b00000011; // 64 prescaler
 
   uart_init();
 
   while (true) {
-    // While pin 8 is LOW
     while ((PINB & 0b00000001) == 0b00000000);
-    // If pin 8 is HIGH
-    if ((PINB & 0b00000001) == 0b00000001){
-      // Sets the value of the timer to pulse_interval >> time between 2 signals
-      pulse_interval = TCNT1;
-      // Reset the timer
-      TCNT1 = 0;
+    while ((PINB & 0b00000001) == 0b00000001);
+
+    // Sets the value of the timer to pulse_interval >> time between 2 signals >microseconds<
+    pulse_interval = static_cast<uint32_t>(TCNT1) * 4; 
+
+    // Reset the timer
+    TCNT1 = 0;
      
-      // Convert pulse_interval >in microseconds< into rpm
-      rpm = 60000000 / pulse_interval;
-
-      // Rounds the rpm value
-      map_index = round(rpm / 500.0);
-      
-      // Safety measure to limit the advence to 16 degrees >index 4< in case of an rpm sensor failure
-      if (map_index > 43) {
-        map_index = 9; //
-      }
-      // Caps the value of map_index to 16 because thats the last value in the ignition table above >RPM_4000 27<
-      else if (map_index > 16) {
-      map_index = 16;
-      }
-     
-      // Calculate the delay >in microseconds< needed to ignite at the specified advence angle in ignition_map
-      angle_difference = trigger_coil_angle - ignition_map[map_index];
-      delay_time = pulse_interval / 360 * angle_difference;
-
-      //////// Rev limiter and ignition ////////
-      
-      // Waits the amount of time specified in delay_time
-      while (TCNT1 < delay_time)
-      
-      // Lighting the led up on pin 13 every x revolutions
-      led++;
-      if (led == 1) {
-        PORTB = 0b00100000;
-        led = 0;
-      }
-
-      // Check if RPM exceeds the rev_limiter threshold
-      if (rpm > rev_limiter) {
-        // Keep ignition off for ignition_cut_time
-        while (TCNT1 < ignition_cut_time);
-      } 
-      else {
-        PORTB = 0b00000010; // Ignition on pin 9
-      }
-      // Time during which pin 9 will be high >microseconds<
-      while (TCNT1 < delay_time + 25)
-      PORTB = 0b00000000;
+    // Convert pulse_interval >in microseconds< into rpm
+    rpm = 60000000 / pulse_interval;
+    
+    // Rounds the rpm value
+    map_index = round(rpm / 250.0);
+    
+    // Safety measure to limit the advence to 16 degrees >map_index 9< if the rpm reading exceeds 11000rpm (in case of an rpm sensor failure)
+    if (map_index > 44) {
+      map_index = 9; //
+    }
+    // Caps the value of map_index to 16 because thats the last value in the ignition table above >RPM_4000 27<
+    else if (map_index > 16) {
+    map_index = 16;
     }
     
+    // Calculate the delay >in microseconds< needed to ignite at the specified advence angle in ignition_map
+    angle_difference = trigger_coil_angle - ignition_map[map_index];
+    delay_time = pulse_interval / 360 * angle_difference;
+    
+    //////// Rev limiter and ignition ////////
+    // Waits the amount of time specified in delay_time
+    while (TCNT1 < delay_time)
+    
+    // Lighting the led up on pin 13 every x revolutions
+    led++;
+    if (led == 8) {
+      PORTB = 0b00100000;
+      led = 0;
+    }
+    // Check if RPM exceeds the rev_limiter threshold
+    if (rpm > rev_limiter) {
+      // Keep ignition off for ignition_cut_time
+      while (TCNT1 < ignition_cut_time);
+    } 
+    else {
+      PORTB = 0b00000010; // Ignition on pin 9
+    }
+    // Time during which pin 9 will be high >microseconds<
+    while (TCNT1 < delay_time + 25)
+    PORTB = 0b00000000;
+    
     // Transmit the value of map_index through serial >UART<
-    uart_transmit_char(map_index);
+    uart_transmit_uint32(pulse_interval);
+    uart_transmit_string("\n");
+    uart_transmit_uint8(map_index);
     uart_transmit_string("\n");
     uart_transmit_uint16(rpm);
     uart_transmit_string("\n");
     uart_transmit_string("\n");
   }
 }
+
+//to do, add overflow check, to avoid weird values at low rpm
+//try another way to write the functions for UART , object...
