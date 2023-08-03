@@ -2,7 +2,7 @@
 #include <avr/io.h>
 #include <string.h>
 
-#define rev_limiter 12000 // Rpm value
+#define rev_limiter 11000 // Rpm value
 #define ignition_cut_time 20000 // >Microseconds< // 1ms = 1000μs
 #define trigger_coil_angle 27
 #define RPM_0    10 // This curve is linear from 1000 RPM to 4000.
@@ -43,24 +43,23 @@ void uart_transmit_string(const char* string) {
     uart_transmit_char(string[i]);
 }
 
-void uart_transmit_uint8(uint8_t data) {
+void uart_transmit_uint(uint8_t data) {
   char buffer[4]; // Buffer to hold the string representation of the number
   snprintf(buffer, sizeof(buffer), "%u", data); // Convert uint8_t to string
   uart_transmit_string(buffer); // Transmit the string over UART
 }
 
-void uart_transmit_uint16(uint16_t data) {
+void uart_transmit_uint(uint16_t data) {
   char buffer[6]; // Buffer to hold the string representation of the number
   snprintf(buffer, sizeof(buffer), "%u", data); // Convert uint16_t to string
   uart_transmit_string(buffer); // Transmit the string over UART
 }
 
-void uart_transmit_uint32(uint32_t data) {
+void uart_transmit_uint(uint32_t data) {
   char buffer[11]; // Buffer to hold the string representation of the number
   snprintf(buffer, sizeof(buffer), "%lu", data); // Convert uint32_t to string
   uart_transmit_string(buffer); // Transmit the string over UART
 }
-
 
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////Main Function///////////////////////////////
@@ -68,8 +67,9 @@ void uart_transmit_uint32(uint32_t data) {
 
 int main() {
   float ignition_map[17] = { RPM_0, RPM_250, RPM_500, RPM_750, RPM_1000, RPM_1250, RPM_1500, RPM_1750, RPM_2000, RPM_2250, RPM_2500, RPM_2750, RPM_3000, RPM_3250, RPM_3500, RPM_3750, RPM_4000 };
-  uint8_t led = 0, angle_difference, map_index;
-  uint16_t rpm = 0; 
+  float angle_difference;
+  uint8_t led = 0, map_index;
+  uint16_t rpm = 0, angle_difference2; 
   uint32_t pulse_interval, delay_time;
 
   PORTB = 0b00000000;
@@ -107,6 +107,7 @@ int main() {
     // Calculate the delay >in microseconds< needed to ignite at the specified advence angle in ignition_map
     angle_difference = trigger_coil_angle - ignition_map[map_index];
     delay_time = pulse_interval / 360 * angle_difference;
+    angle_difference2 = angle_difference * 100;
     
     //////// Rev limiter and ignition ////////
     // Waits the amount of time specified in delay_time
@@ -131,15 +132,14 @@ int main() {
     PORTB = 0b00000000;
     
     // Transmit the value of map_index through serial >UART<
-    uart_transmit_uint32(pulse_interval);
+    uart_transmit_uint(angle_difference2);
     uart_transmit_string("\n");
-    uart_transmit_uint8(map_index);
+    uart_transmit_uint(map_index);
     uart_transmit_string("\n");
-    uart_transmit_uint16(rpm);
+    uart_transmit_uint(rpm);
     uart_transmit_string("\n");
     uart_transmit_string("\n");
   }
 }
 
-//to do, add overflow check, to avoid weird values at low rpm
-//try another way to write the functions for UART , object...
+//to do : 2 step
