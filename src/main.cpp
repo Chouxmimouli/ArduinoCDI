@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define rev_limiter 11000 // Rpm value
-#define ignition_cut_time 20000 // >Microseconds< // 1ms = 1000μs
+#define ignition_cut_time 5000 // not μs. Devide your number by 4 (w/ 64 prescaler) // 1ms = 1000μs
 #define trigger_coil_angle 27
 #define RPM_0    10 // This curve is linear from 1000 RPM to 4000.
 #define RPM_250  10
@@ -83,14 +83,14 @@ int main() {
     while ((PINB & 0b00000001) == 0b00000000);
     while ((PINB & 0b00000001) == 0b00000001);
 
-    // Sets the value of the timer to pulse_interval >> time between 2 signals >microseconds<
-    pulse_interval = static_cast<uint32_t>(TCNT1) * 4; 
+    // Sets the value of the timer to pulse_interval >> time between 2 signals 
+    pulse_interval = TCNT1; 
 
     // Reset the timer
     TCNT1 = 0;
      
-    // Convert pulse_interval >in microseconds< into rpm
-    rpm = 60000000 / pulse_interval;
+    // Convert pulse_interval into rpm
+    rpm = 15000000 / pulse_interval;
     
     // Rounds the rpm value
     map_index = round(rpm / 250.0);
@@ -107,11 +107,9 @@ int main() {
     // Calculate the delay >in microseconds< needed to ignite at the specified advence angle in ignition_map
     angle_difference = trigger_coil_angle - ignition_map[map_index];
     delay_time = pulse_interval / 360 * angle_difference;
-    angle_difference2 = angle_difference * 100;
+    angle_difference2 = angle_difference * 10;
     
     //////// Rev limiter and ignition ////////
-    // Waits the amount of time specified in delay_time
-    while (TCNT1 < delay_time);
 
     // Check if RPM exceeds the rev_limiter threshold
     if (rpm > rev_limiter) {
@@ -119,11 +117,13 @@ int main() {
       while (TCNT1 < ignition_cut_time);
     } 
     else {
+      // Waits the amount of time specified in delay_time
+      while (TCNT1 < delay_time);
       PORTB = 0b00100010; // Ignition on pin 9
     }
-    // Time during which pin 9 will be high >microseconds<
-    while (TCNT1 < delay_time + 200);
-    PORTB = 0b00000000;
+    // Time during which pin 9 will be high
+    while (TCNT1 < (delay_time + 5000)); // 5000*4 = >microseconds<
+    PORTB = PORTB & 0b11111101;
     
     // Transmit the value of map_index through serial >UART<
     uart_transmit_uint(angle_difference2);
@@ -135,5 +135,8 @@ int main() {
     uart_transmit_uint(delay_time);
     uart_transmit_string("\n");
     uart_transmit_string("\n");
+
+    //turn off the led
+    PORTB = PORTB & 0b11011111;
   }
 }
