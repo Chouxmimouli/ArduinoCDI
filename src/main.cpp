@@ -111,24 +111,18 @@ int main() {
     
     //////// Rev limiter and ignition ////////
     // Waits the amount of time specified in delay_time
-    while (TCNT1 < delay_time)
-    
-    // Lighting the led up on pin 13 every x revolutions
-    led++;
-    if (led == 8) {
-      PORTB = 0b00100000;
-      led = 0;
-    }
+    while (TCNT1 < delay_time);
+
     // Check if RPM exceeds the rev_limiter threshold
     if (rpm > rev_limiter) {
       // Keep ignition off for ignition_cut_time
       while (TCNT1 < ignition_cut_time);
     } 
     else {
-      PORTB = 0b00000010; // Ignition on pin 9
+      PORTB = 0b00100010; // Ignition on pin 9
     }
     // Time during which pin 9 will be high >microseconds<
-    while (TCNT1 < delay_time + 25)
+    while (TCNT1 < delay_time + 200);
     PORTB = 0b00000000;
     
     // Transmit the value of map_index through serial >UART<
@@ -138,8 +132,8 @@ int main() {
     uart_transmit_string("\n");
     uart_transmit_uint(rpm);
     uart_transmit_string("\n");
+    uart_transmit_uint(delay_time);
+    uart_transmit_string("\n");
     uart_transmit_string("\n");
   }
 }
-
-//to do : 2 step
