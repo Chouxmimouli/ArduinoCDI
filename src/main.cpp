@@ -2,7 +2,7 @@
 #include <avr/io.h>
 #include <string.h>
 
-#define rev_limiter 11000 // Rpm value
+#define rev_limiter 12000 // Rpm value
 #define ignition_cut_time 5000 // not μs. Devide your number by 4 (w/ 64 prescaler) // 1ms = 1000μs
 #define trigger_coil_angle 27
 #define RPM_0    10 // This curve is linear from 1000 RPM to 4000.
@@ -71,6 +71,7 @@ int main() {
   uint8_t led = 0, map_index;
   uint16_t rpm = 0, angle_difference2; 
   uint32_t pulse_interval, delay_time;
+  boolean can_run = false;
 
   PORTB = 0b00000000;
   DDRB = 0b00100010;
@@ -80,63 +81,68 @@ int main() {
   uart_init();
 
   while (true) {
-    while ((PINB & 0b00000001) == 0b00000000);
-    while ((PINB & 0b00000001) == 0b00000001);
+    if ((PINB & 0b00000001) == 0b00000001 & can_run == true) {
+      // Sets the value of the timer to pulse_interval >> time between 2 signals 
+      pulse_interval = TCNT1; 
 
-    // Sets the value of the timer to pulse_interval >> time between 2 signals 
-    pulse_interval = TCNT1; 
+      // Reset the timer
+      TCNT1 = 0;
 
-    // Reset the timer
-    TCNT1 = 0;
-     
-    // Convert pulse_interval into rpm
-    rpm = 15000000 / pulse_interval;
-    
-    // Rounds the rpm value
-    map_index = round(rpm / 250.0);
-    
-    // Safety measure to limit the advence to 16 degrees >map_index 9< if the rpm reading exceeds 11000rpm (in case of an rpm sensor failure)
-    if (map_index > 44) {
-      map_index = 9; //
+      // Convert pulse_interval into rpm
+      rpm = 15000000 / pulse_interval;
+
+      // Rounds the rpm value
+      map_index = round(rpm / 250.0);
+
+      // Safety measure to limit the advence to 16 degrees >map_index 9< if the rpm reading exceeds 11000rpm (in case of an rpm sensor failure)
+      if (map_index > 44) {
+        map_index = 9; //
+      }
+      // Caps the value of map_index to 16 because thats the last value in the ignition table above >RPM_4000 27<
+      else if (map_index > 16) {
+      map_index = 16;
+      }
+
+      // Calculate the delay >in microseconds< needed to ignite at the specified advence angle in ignition_map
+      angle_difference = trigger_coil_angle - ignition_map[map_index];
+      delay_time = pulse_interval / 360 * angle_difference;
+      angle_difference2 = angle_difference * 10;
+
+      //////// Rev limiter and ignition ////////
+
+      // Check if RPM exceeds the rev_limiter threshold
+      if (rpm > rev_limiter) {
+        // Keep ignition off for ignition_cut_time
+        while (TCNT1 < ignition_cut_time);
+      } 
+      else {
+        // Waits the amount of time specified in delay_time
+        while (TCNT1 < delay_time);
+        PORTB = 0b00100010; // Ignition on pin 9
+      }
+      // Time during which pin 9 will be high
+      while (TCNT1 < (delay_time + 250)); // 5000*4 = >microseconds<
+      PORTB = PORTB & 0b11111101;
+
+      // Transmit the value of map_index through serial >UART<
+      uart_transmit_uint(angle_difference2);
+      uart_transmit_string("\n");
+      uart_transmit_uint(map_index);
+      uart_transmit_string("\n");
+      uart_transmit_uint(rpm);
+      uart_transmit_string("\n");
+      uart_transmit_uint(delay_time);
+      uart_transmit_string("\n");
+      uart_transmit_string("\n");
+
+      //turn off the led
+      PORTB = PORTB & 0b11011111;
+      
+      can_run = false;
     }
-    // Caps the value of map_index to 16 because thats the last value in the ignition table above >RPM_4000 27<
-    else if (map_index > 16) {
-    map_index = 16;
-    }
-    
-    // Calculate the delay >in microseconds< needed to ignite at the specified advence angle in ignition_map
-    angle_difference = trigger_coil_angle - ignition_map[map_index];
-    delay_time = pulse_interval / 360 * angle_difference;
-    angle_difference2 = angle_difference * 10;
-    
-    //////// Rev limiter and ignition ////////
-
-    // Check if RPM exceeds the rev_limiter threshold
-    if (rpm > rev_limiter) {
-      // Keep ignition off for ignition_cut_time
-      while (TCNT1 < ignition_cut_time);
-    } 
     else {
-      // Waits the amount of time specified in delay_time
-      while (TCNT1 < delay_time);
-      PORTB = 0b00100010; // Ignition on pin 9
+      while ((PINB & 0b00000001) == 0b00000000);
+      can_run = true;
     }
-    // Time during which pin 9 will be high
-    while (TCNT1 < (delay_time + 5000)); // 5000*4 = >microseconds<
-    PORTB = PORTB & 0b11111101;
-    
-    // Transmit the value of map_index through serial >UART<
-    uart_transmit_uint(angle_difference2);
-    uart_transmit_string("\n");
-    uart_transmit_uint(map_index);
-    uart_transmit_string("\n");
-    uart_transmit_uint(rpm);
-    uart_transmit_string("\n");
-    uart_transmit_uint(delay_time);
-    uart_transmit_string("\n");
-    uart_transmit_string("\n");
-
-    //turn off the led
-    PORTB = PORTB & 0b11011111;
-  }
-}
+  } 
+} 
