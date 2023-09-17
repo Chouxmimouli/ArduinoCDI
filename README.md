@@ -1,5 +1,6 @@
 # ArduinoCDI
 
+With a simple arduino and some code, you'll be able to control the ingintion timing of any bike within a tenth of a degree. <br>
 This repository is a PlatformIO project, you can download it and open it with the free VSCode extension. <br>
 The arduino program is in the SRC folder.
 
