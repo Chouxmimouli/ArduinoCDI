@@ -97,7 +97,7 @@ int main() {
     TCNT1 = 0;
   
     // When the revlimiter was active the previous rotation or when the timer overflows or on the first engine rotation, the rpm reading can be wrong
-    // becuase the prevous timer value is flawed ot inexistant. To fix the problem I use a variable called "fresh_signal" which sets the timer when 
+    // becuase the prevous timer value is flawed or inexistant. To fix the problem I use a variable called "fresh_signal" which sets the timer when 
     // the arduino recieves a signal but prevent the fuel from being ingited
     if (fresh_signal == false) {
       
@@ -128,6 +128,9 @@ int main() {
         // Keep ignition off for ignition_cut_time
         while (TCNT1 < ignition_cut_time);                 
         fresh_signal = true;
+        uart_transmit_string("Fresh_Signal");
+        uart_transmit_string("\n");
+        uart_transmit_string("\n");
       } 
       else { 
         // Wait the amount of time specified in delay_time
