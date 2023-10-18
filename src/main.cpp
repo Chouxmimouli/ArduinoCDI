@@ -2,7 +2,7 @@
 #include <avr/io.h>
 #include <string.h>
 
-#define rev_limiter 9500 // Rpm value
+#define rev_limiter 10000 // Rpm value
 #define ignition_cut_time 10000 // not μs. Devide your μs number by 4 μs (w/ 64 prescaler) // 1ms = 1000μs
 #define trigger_coil_angle 25
 #define RPM_0    10 // This curve is linear from 1000 RPM to 4000.
@@ -50,15 +50,15 @@ void uart_transmit_uint(uint8_t data) {
 }
 
 void uart_transmit_uint(uint16_t data) {
-  char buffer[6]; // Buffer to hold the string representation of the number
-  snprintf(buffer, sizeof(buffer), "%u", data); // Convert uint16_t to string
-  uart_transmit_string(buffer); // Transmit the string over UART
+  char buffer[6];
+  snprintf(buffer, sizeof(buffer), "%u", data);
+  uart_transmit_string(buffer);
 }
 
 void uart_transmit_uint(uint32_t data) {
-  char buffer[11]; // Buffer to hold the string representation of the number
-  snprintf(buffer, sizeof(buffer), "%lu", data); // Convert uint32_t to string
-  uart_transmit_string(buffer); // Transmit the string over UART
+  char buffer[11];
+  snprintf(buffer, sizeof(buffer), "%lu", data);
+  uart_transmit_string(buffer);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -72,7 +72,7 @@ int main() {
   float ignition_map[17] = { RPM_0, RPM_250, RPM_500, RPM_750, RPM_1000, RPM_1250, RPM_1500, RPM_1750, RPM_2000, RPM_2250, RPM_2500, RPM_2750, RPM_3000, RPM_3250, RPM_3500, RPM_3750, RPM_4000 };
   float angle_difference;
   uint8_t map_index;
-  uint16_t rpm = 0, angle_difference2; 
+  uint16_t rpm = 0;
   uint32_t pulse_interval, delay_time;
 
   PORTB = 0b00000000;
@@ -95,10 +95,11 @@ int main() {
     
     // Reset the timer
     TCNT1 = 0;
-  
-    // When the revlimiter was active the previous rotation or when the timer overflows or on the first engine rotation, the rpm reading can be wrong
-    // becuase the prevous timer value is flawed or inexistant. To fix the problem I use a variable called "fresh_signal" which sets the timer when 
-    // the arduino recieves a signal but prevent the fuel from being ingited
+
+    /* When the revlimiter was active the previous rotation or when the timer overflows or on the first engine rotation, the rpm reading can be wrong
+    becuase the prevous timer value is flawed or inexistant. To fix the problem I use a variable called "fresh_signal" which sets the timer when 
+    the arduino recieves a signal but prevent the fuel from being ingited */
+
     if (fresh_signal == false) {
       
       // Convert pulse_interval into rpm
@@ -120,7 +121,6 @@ int main() {
       // Calculate the delay, not in μs, needed to ignite at the specified advence angle in ignition_map
       angle_difference = trigger_coil_angle - ignition_map[map_index];
       delay_time = pulse_interval / 360 * angle_difference;
-      angle_difference2 = angle_difference * 10;
 
       //////// Rev limiter and ignition ////////
       // Check if RPM exceeds the rev_limiter threshold
@@ -128,7 +128,7 @@ int main() {
         // Keep ignition off for ignition_cut_time
         while (TCNT1 < ignition_cut_time);                 
         fresh_signal = true;
-        uart_transmit_string("Fresh_Signal");
+        uart_transmit_string("Rev_limiter");
         uart_transmit_string("\n");
         uart_transmit_string("\n");
       } 
@@ -143,12 +143,7 @@ int main() {
       }
 
       // Transmit the value of map_index through serial >UART<
-      uart_transmit_uint(angle_difference2);
-      uart_transmit_string("\n");
-      uart_transmit_uint(map_index);
-      uart_transmit_string("\n");
       uart_transmit_uint(rpm);
-      uart_transmit_string("\n");
       uart_transmit_string("\n");
 
       //turn off the led
@@ -162,7 +157,6 @@ int main() {
 
 ISR(TIMER1_OVF_vect) {
   uart_transmit_string("Timer Overflow");
-  uart_transmit_string("\n");
   uart_transmit_string("\n");
   fresh_signal = true; 
 } 
