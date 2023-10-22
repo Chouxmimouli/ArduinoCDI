@@ -28,7 +28,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 void uart_init() {
-  UBRR0 = 8; // For 16MHz and baud rate of 115200
+  UBRR0 = 103; // For 16MHz and baud rate of 115200
   UCSR0B = (1 << TXEN0) | (1 << RXEN0); // Enable transmitter and receiver
   UCSR0C = (1 << UCSZ01) | (1 << UCSZ00); // 8-bit data, no parity, 1 stop bit
 }
