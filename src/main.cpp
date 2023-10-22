@@ -129,8 +129,7 @@ int main() {
         while (TCNT1 < ignition_cut_time);                 
         fresh_signal = true;
         uart_transmit_string("Rev_limiter");
-        uart_transmit_string("\n");
-        uart_transmit_string("\n");
+        uart_transmit_string("\n \n");
       } 
       else { 
         // Wait the amount of time specified in delay_time
